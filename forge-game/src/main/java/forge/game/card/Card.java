@@ -165,6 +165,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars {
 
     private final NavigableMap<Long, CardCloneStates> clonedStates = Maps.newTreeMap(); // Layer 1
 
+    private final Table<Long, Long, Map<String, String>> changedSVars = TreeBasedTable.create();
+
     private final Map<Long, PlayerCollection> mayLook = Maps.newHashMap();
     private final PlayerCollection mayLookFaceDownExile = new PlayerCollection();
     private final PlayerCollection mayLookTemp = new PlayerCollection();
@@ -180,9 +182,6 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars {
     // changes that say "replace each instance of one [color,type] by another - timestamp is the key of maps
     private final CardChangedWords changedTextColors = new CardChangedWords();
     private final CardChangedWords changedTextTypes = new CardChangedWords();
-
-    /** Original values of SVars changed by text changes. */
-    private Map<String, String> originalSVars = Maps.newHashMap();
 
     private final Set<Object> rememberedObjects = Sets.newLinkedHashSet();
     private Map<Player, String> flipResult;
@@ -1592,10 +1591,20 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars {
     }
 
     public final String getSVar(final String var) {
+        for (Map<String, String> map : changedSVars.values()) {
+            if (map.containsKey(var)) {
+                return map.get(var);
+            }
+        }
         return currentState.getSVar(var);
     }
 
     public final boolean hasSVar(final String var) {
+        for (Map<String, String> map : changedSVars.values()) {
+            if (map.containsKey(var)) {
+                return true;
+            }
+        }
         return currentState.hasSVar(var);
     }
 
@@ -1619,6 +1628,13 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars {
 
     public final void removeSVar(final String var) {
         currentState.removeSVar(var);
+    }
+
+    public final void addChangedSVars(Map<String, String> map, long timestamp, long staticId) {
+        this.changedSVars.put(timestamp, staticId, map);
+    }
+    public final void removeChangedSVars(long timestamp, long staticId) {
+        this.changedSVars.remove(timestamp, staticId);
     }
 
     public final int getTurnInZone() {
@@ -4597,7 +4613,6 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars {
      * Update the changed text of the intrinsic spell abilities and keywords.
      */
     public void updateChangedText() {
-        resetChangedSVars();
 
         // update type
         List<String> toAdd = Lists.newArrayList();
@@ -4663,26 +4678,6 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars {
     public final void copyChangedTextFrom(final Card other) {
         changedTextColors.copyFrom(other.changedTextColors);
         changedTextTypes.copyFrom(other.changedTextTypes);
-    }
-
-    /**
-     * Change a SVar due to a text change effect. Change is volatile and will be
-     * reverted upon refreshing text changes (unless it is changed again at that
-     * time).
-     *
-     * @param key the SVar name.
-     * @param value the new SVar value.
-     */
-    public final void changeSVar(final String key, final String value) {
-        originalSVars.put(key, getSVar(key));
-        setSVar(key, value);
-    }
-
-    private void resetChangedSVars() {
-        for (final Entry<String, String> svar : originalSVars.entrySet()) {
-            setSVar(svar.getKey(), svar.getValue());
-        }
-        originalSVars.clear();
     }
 
     public final KeywordInterface addIntrinsicKeyword(final String s) {

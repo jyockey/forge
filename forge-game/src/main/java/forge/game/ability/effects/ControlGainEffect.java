@@ -1,6 +1,7 @@
 package forge.game.ability.effects;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -195,11 +196,11 @@ public class ControlGainEffect extends SpellAbilityEffect {
                 }
                 if (lose.contains("EOT")) {
                     game.getEndOfTurn().addUntil(loseControl);
-                    tgtC.setSVar("SacMe", "6");
+                    tgtC.addChangedSVars(Collections.singletonMap("SacMe", "6"), tStamp, 0);
                 }
                 if (lose.contains("EndOfCombat")) {
                     game.getEndOfCombat().addUntil(loseControl);
-                    tgtC.setSVar("SacMe", "6");
+                    tgtC.addChangedSVars(Collections.singletonMap("SacMe", "6"), tStamp, 0);
                 }
                 if (lose.contains("StaticCommandCheck")) {
                     String leftVar = sa.getSVar(sa.getParam("StaticCommandCheckSVar"));
@@ -261,7 +262,7 @@ public class ControlGainEffect extends SpellAbilityEffect {
             @Override
             public void run() { 
                 doLoseControl(c, hostCard, bTapOnLose, tStamp);
-                c.removeSVar("SacMe");
+                c.removeChangedSVars(tStamp, 0);
             }
         };
 
